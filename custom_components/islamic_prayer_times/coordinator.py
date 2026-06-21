@@ -16,7 +16,9 @@ from .const import (
     CUSTOM_PRAYTIMES_METHODS,
     DEFAULT_CALC_METHOD,
     DOMAIN,
+    EVENT_PRAYER_TIME,
     PRAYER_FAJR,
+    PRAYER_NAMES,
     PRAYER_ZUHR,
     PRAYER_ASR,
     PRAYER_MAGHRIB,
@@ -70,6 +72,8 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
         self.next_prayer_toggles = next_prayer_toggles
         self._cached_date: str | None = None
         self._cached_times: dict[str, datetime] = {}
+        self._announced_prayers: set[str] = set()
+        self._initialized: bool = False
 
     def _calculate_times(
         self, for_date: datetime, tz: ZoneInfo
@@ -115,6 +119,34 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
                     return prayer_key, times[prayer_key], enabled
         return None, None, enabled
 
+    def _fire_prayer_events(
+        self, times: dict[str, datetime], now: datetime
+    ) -> None:
+        """Fire events for prayers whose time has just arrived."""
+        for prayer_key in PRAYERS:
+            if prayer_key in self._announced_prayers:
+                continue
+            prayer_dt = times.get(prayer_key)
+            if prayer_dt and prayer_dt <= now:
+                self._announced_prayers.add(prayer_key)
+                if not self._initialized:
+                    continue
+                self.hass.bus.async_fire(
+                    EVENT_PRAYER_TIME,
+                    {
+                        "prayer": prayer_key,
+                        "name": PRAYER_NAMES.get(prayer_key, prayer_key),
+                        "time": prayer_dt.strftime("%H:%M"),
+                    },
+                )
+                _LOGGER.debug("Fired %s event for %s", EVENT_PRAYER_TIME, prayer_key)
+        if not self._initialized:
+            self._initialized = True
+            _LOGGER.debug(
+                "Initialized announced prayers (skipped events for already-passed: %s)",
+                self._announced_prayers,
+            )
+
     async def _async_update_data(self) -> PrayerTimeData:
         """Recalculate prayer times and determine next prayer."""
         tz = ZoneInfo(self.hass.config.time_zone)
@@ -126,6 +158,9 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
                 self._calculate_times, now, tz
             )
             self._cached_date = today_str
+            self._announced_prayers.clear()
+
+        self._fire_prayer_events(self._cached_times, now)
 
         next_prayer, next_time, enabled = self._determine_next_prayer(
             self._cached_times, now

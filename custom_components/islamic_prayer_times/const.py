@@ -83,6 +83,8 @@ CALC_METHODS = {
 
 DEFAULT_CALC_METHOD = "Karachi"
 
+EVENT_PRAYER_TIME = "islamic_prayer_time"
+
 # Maps our prayer keys to praytimes output keys
 PRAYTIMES_KEY_MAP = {
     PRAYER_TARKE_SEHER: "imsak",
