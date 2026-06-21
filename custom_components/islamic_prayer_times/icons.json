@@ -1,0 +1,13 @@
+{
+  "entity": {
+    "sensor": {
+      "tarke_seher": { "default": "mdi:weather-sunset-up" },
+      "fajr": { "default": "mdi:weather-sunset-up" },
+      "zuhr": { "default": "mdi:white-balance-sunny" },
+      "asr": { "default": "mdi:weather-sunny" },
+      "maghrib": { "default": "mdi:weather-sunset-down" },
+      "isha": { "default": "mdi:weather-night" },
+      "next_prayer": { "default": "mdi:timer-sand" }
+    }
+  }
+}

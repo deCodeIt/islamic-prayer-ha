@@ -1,0 +1,73 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Location",
+        "description": "Select your location on the map for accurate prayer time calculations.",
+        "data": {
+          "location": "Location"
+        }
+      },
+      "method": {
+        "title": "Calculation Method",
+        "description": "Choose the prayer time calculation method used in your region.",
+        "data": {
+          "calc_method": "Calculation Method"
+        }
+      },
+      "adjustments": {
+        "title": "Adjustments",
+        "description": "Adjust individual prayer times by +/- minutes and choose which prayers contribute to the Next Prayer sensor.",
+        "data": {
+          "tarke_seher_offset": "Tark-e-Seher offset (minutes)",
+          "fajr_offset": "Fajr offset (minutes)",
+          "zuhr_offset": "Zuhr offset (minutes)",
+          "asr_offset": "Asr offset (minutes)",
+          "maghrib_offset": "Maghrib offset (minutes)",
+          "isha_offset": "Isha offset (minutes)",
+          "next_prayer_fajr": "Include Fajr in Next Prayer",
+          "next_prayer_zuhr": "Include Zuhr in Next Prayer",
+          "next_prayer_asr": "Include Asr in Next Prayer",
+          "next_prayer_maghrib": "Include Maghrib in Next Prayer",
+          "next_prayer_isha": "Include Isha in Next Prayer"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Islamic Prayer Times is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Location",
+        "description": "Update your location for prayer time calculations.",
+        "data": {
+          "location": "Location"
+        }
+      },
+      "method": {
+        "title": "Calculation Method",
+        "data": {
+          "calc_method": "Calculation Method"
+        }
+      },
+      "adjustments": {
+        "title": "Adjustments",
+        "data": {
+          "tarke_seher_offset": "Tark-e-Seher offset (minutes)",
+          "fajr_offset": "Fajr offset (minutes)",
+          "zuhr_offset": "Zuhr offset (minutes)",
+          "asr_offset": "Asr offset (minutes)",
+          "maghrib_offset": "Maghrib offset (minutes)",
+          "isha_offset": "Isha offset (minutes)",
+          "next_prayer_fajr": "Include Fajr in Next Prayer",
+          "next_prayer_zuhr": "Include Zuhr in Next Prayer",
+          "next_prayer_asr": "Include Asr in Next Prayer",
+          "next_prayer_maghrib": "Include Maghrib in Next Prayer",
+          "next_prayer_isha": "Include Isha in Next Prayer"
+        }
+      }
+    }
+  }
+}
