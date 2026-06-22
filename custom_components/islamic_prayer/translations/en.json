@@ -69,5 +69,23 @@
         }
       }
     }
+  },
+  "entity": {
+    "event": {
+      "prayer_time": {
+        "name": "Prayer Time",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "fajr": "Fajr",
+              "zuhr": "Zuhr",
+              "asr": "Asr",
+              "maghrib": "Maghrib",
+              "isha": "Isha"
+            }
+          }
+        }
+      }
+    }
   }
 }

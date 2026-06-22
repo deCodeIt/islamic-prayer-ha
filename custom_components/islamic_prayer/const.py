@@ -83,7 +83,9 @@ CALC_METHODS = {
 
 DEFAULT_CALC_METHOD = "Karachi"
 
-EVENT_PRAYER_TIME = "islamic_prayer_time"
+EVENT_PRAYER_TIME = "prayer_time"
+
+EVENT_TYPES = ["fajr", "zuhr", "asr", "maghrib", "isha"]
 
 # Maps our prayer keys to praytimes output keys
 PRAYTIMES_KEY_MAP = {
