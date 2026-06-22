@@ -1,6 +1,6 @@
 """Constants for Islamic Prayer Times integration."""
 
-DOMAIN = "islamic_prayer_times"
+DOMAIN = "islamic_prayer"
 
 CONF_LOCATION = "location"
 CONF_CALC_METHOD = "calc_method"

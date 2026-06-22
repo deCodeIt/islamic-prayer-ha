@@ -23,7 +23,7 @@ A HACS-compatible Home Assistant custom integration that provides Islamic prayer
 
 ### Manual
 
-1. Copy `custom_components/islamic_prayer_times/` to your HA `custom_components/` directory
+1. Copy `custom_components/islamic_prayer/` to your HA `custom_components/` directory
 2. Restart Home Assistant
 
 ## Configuration

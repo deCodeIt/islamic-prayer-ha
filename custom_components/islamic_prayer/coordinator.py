@@ -123,7 +123,7 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
         self, times: dict[str, datetime], now: datetime
     ) -> None:
         """Fire events for prayers whose time has just arrived."""
-        for prayer_key in PRAYERS:
+        for prayer_key in NEXT_PRAYER_ORDER:
             if prayer_key in self._announced_prayers:
                 continue
             prayer_dt = times.get(prayer_key)
