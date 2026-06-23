@@ -1,4 +1,4 @@
-"""Islamic Prayer Times integration."""
+"""Islamic Prayers integration."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ PLATFORMS = ["event", "sensor"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Islamic Prayer Times from a config entry."""
+    """Set up Islamic Prayers from a config entry."""
     data = entry.data
 
     offsets = {

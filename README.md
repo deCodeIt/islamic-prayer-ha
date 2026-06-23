@@ -1,4 +1,4 @@
-# Islamic Prayer Times - Home Assistant Integration
+# Islamic Prayers - Home Assistant Integration
 
 A HACS-compatible Home Assistant custom integration that provides Islamic prayer time sensors with support for multiple global calculation methods.
 
@@ -18,7 +18,7 @@ A HACS-compatible Home Assistant custom integration that provides Islamic prayer
 1. Open HACS in Home Assistant
 2. Click the three dots menu → Custom repositories
 3. Add `https://github.com/deCodeIt/islamic-prayer-ha` as an Integration
-4. Search for "Islamic Prayer Times" and install
+4. Search for "Islamic Prayers" and install
 5. Restart Home Assistant
 
 ### Manual
@@ -29,7 +29,7 @@ A HACS-compatible Home Assistant custom integration that provides Islamic prayer
 ## Configuration
 
 1. Go to Settings → Devices & Services → Add Integration
-2. Search for "Islamic Prayer Times"
+2. Search for "Islamic Prayers"
 3. **Step 1**: Select your location on the map
 4. **Step 2**: Choose your calculation method
 5. **Step 3**: Set per-prayer time offsets and Next Prayer toggles

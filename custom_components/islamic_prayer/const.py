@@ -1,4 +1,4 @@
-"""Constants for Islamic Prayer Times integration."""
+"""Constants for Islamic Prayers integration."""
 
 DOMAIN = "islamic_prayer"
 

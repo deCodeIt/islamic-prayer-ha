@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for Islamic Prayer Times."""
+"""DataUpdateCoordinator for Islamic Prayers."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Event platform for Islamic Prayer Times."""
+"""Event platform for Islamic Prayers."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ class PrayerTimeEvent(
         self._attr_name = "Prayer Time"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name="Islamic Prayer Times",
+            name="Islamic Prayers",
             manufacturer="adhanpy",
             model=CALC_METHODS.get(
                 entry.data.get(CONF_CALC_METHOD, DEFAULT_CALC_METHOD), "Unknown"

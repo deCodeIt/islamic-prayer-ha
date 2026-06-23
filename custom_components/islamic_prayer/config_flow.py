@@ -1,4 +1,4 @@
-"""Config flow for Islamic Prayer Times."""
+"""Config flow for Islamic Prayers."""
 
 from __future__ import annotations
 
@@ -108,7 +108,7 @@ def _adjustments_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
 
 
 class IslamicPrayerTimesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Islamic Prayer Times."""
+    """Handle a config flow for Islamic Prayers."""
 
     VERSION = 1
 
@@ -173,7 +173,7 @@ class IslamicPrayerTimesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = {**self._data, **user_input}
             return self.async_create_entry(
-                title="Islamic Prayer Times",
+                title="Islamic Prayers",
                 data=data,
             )
 
@@ -191,7 +191,7 @@ class IslamicPrayerTimesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class IslamicPrayerTimesOptionsFlow(config_entries.OptionsFlow):
-    """Handle options flow for Islamic Prayer Times."""
+    """Handle options flow for Islamic Prayers."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         self._config_entry = config_entry

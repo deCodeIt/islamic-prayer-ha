@@ -1,4 +1,4 @@
-"""Sensor platform for Islamic Prayer Times."""
+"""Sensor platform for Islamic Prayers."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ from .coordinator import IslamicPrayerTimesCoordinator, PrayerTimeData
 def _device_info(entry: ConfigEntry) -> DeviceInfo:
     return DeviceInfo(
         identifiers={(DOMAIN, entry.entry_id)},
-        name="Islamic Prayer Times",
+        name="Islamic Prayers",
         manufacturer="adhanpy",
         model=CALC_METHODS.get(
             entry.data.get(CONF_CALC_METHOD, DEFAULT_CALC_METHOD), "Unknown"
