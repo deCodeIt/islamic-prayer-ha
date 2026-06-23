@@ -130,7 +130,7 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
             prayer_dt = times.get(prayer_key)
             if prayer_dt and prayer_dt <= now:
                 self._announced_prayers.add(prayer_key)
-                if self._initialized:
+                if self._initialized and self.next_prayer_toggles.get(prayer_key, True):
                     arrived = prayer_key
         if not self._initialized:
             self._initialized = True
