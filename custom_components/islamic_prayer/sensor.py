@@ -8,34 +8,18 @@ from zoneinfo import ZoneInfo
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     CALC_METHODS,
-    CONF_CALC_METHOD,
-    CONF_LATITUDE,
-    CONF_LONGITUDE,
-    DEFAULT_CALC_METHOD,
     DOMAIN,
     PRAYER_NAMES,
     PRAYER_NEXT,
-    PRAYER_OFFSET_MAP,
     PRAYERS,
 )
 from .coordinator import IslamicPrayerTimesCoordinator, PrayerTimeData
-
-
-def _device_info(entry: ConfigEntry) -> DeviceInfo:
-    return DeviceInfo(
-        identifiers={(DOMAIN, entry.entry_id)},
-        name="Islamic Prayers",
-        manufacturer="adhanpy",
-        model=CALC_METHODS.get(
-            entry.data.get(CONF_CALC_METHOD, DEFAULT_CALC_METHOD), "Unknown"
-        ),
-    )
+from .helpers import device_info
 
 
 async def async_setup_entry(
@@ -60,6 +44,7 @@ class PrayerTimeSensor(
     """Sensor showing today's time for a specific prayer."""
 
     _attr_icon = "mdi:mosque"
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -69,11 +54,9 @@ class PrayerTimeSensor(
     ) -> None:
         super().__init__(coordinator)
         self._prayer_key = prayer_key
-        self._entry = entry
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_{prayer_key}"
         self._attr_name = PRAYER_NAMES.get(prayer_key, prayer_key.title())
-        self._attr_device_info = _device_info(entry)
-        self._attr_has_entity_name = True
+        self._attr_device_info = device_info(entry)
 
     @property
     def native_value(self) -> str | None:
@@ -87,15 +70,15 @@ class PrayerTimeSensor(
 
     @property
     def extra_state_attributes(self) -> dict:
-        data = self._entry.data
-        offset_key = PRAYER_OFFSET_MAP.get(self._prayer_key)
         return {
-            "adjustment_minutes": data.get(offset_key, 0) if offset_key else 0,
-            "calculation_method": CALC_METHODS.get(
-                data.get(CONF_CALC_METHOD, DEFAULT_CALC_METHOD), "Unknown"
+            "adjustment_minutes": self.coordinator.offsets.get(
+                self._prayer_key, 0
             ),
-            "latitude": data.get(CONF_LATITUDE),
-            "longitude": data.get(CONF_LONGITUDE),
+            "calculation_method": CALC_METHODS.get(
+                self.coordinator.calc_method, "Unknown"
+            ),
+            "latitude": self.coordinator.latitude,
+            "longitude": self.coordinator.longitude,
         }
 
 
@@ -105,6 +88,7 @@ class NextPrayerSensor(
     """Sensor showing which prayer is next and the countdown."""
 
     _attr_icon = "mdi:timer-sand"
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -112,11 +96,9 @@ class NextPrayerSensor(
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator)
-        self._entry = entry
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_{PRAYER_NEXT}"
         self._attr_name = "Next Prayer"
-        self._attr_device_info = _device_info(entry)
-        self._attr_has_entity_name = True
+        self._attr_device_info = device_info(entry)
 
     @property
     def native_value(self) -> str | None:

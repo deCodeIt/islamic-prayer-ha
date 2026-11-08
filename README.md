@@ -7,7 +7,7 @@ A HACS-compatible Home Assistant custom integration that provides Islamic prayer
 - **6 Prayer Sensors**: Tark-e-Seher, Fajr, Zuhr, Asr, Maghrib, Isha
 - **Next Prayer Sensor**: Shows the upcoming prayer with countdown timer
 - **Multiple Calculation Methods**: MWL, ISNA, Egyptian, Karachi, Umm Al-Qura, Dubai, Qatar, Kuwait, Moon Sighting Committee, Singapore, UOIF
-- **Per-Prayer Adjustments**: Offset each prayer time by +/- minutes
+- **Live Per-Prayer Adjustments**: Offset each prayer time by +/- minutes with sliders that apply instantly
 - **Interactive Map**: Set your location via map picker during setup and reconfiguration
 - **Next Prayer Toggles**: Enable/disable individual prayers from the Next Prayer sensor
 
@@ -34,6 +34,9 @@ A HACS-compatible Home Assistant custom integration that provides Islamic prayer
 4. **Step 2**: Choose your calculation method
 5. **Step 3**: Set per-prayer time offsets and Next Prayer toggles
 
+After setup, the offsets remain available as live sliders (see below) and in
+the integration's **Configure** dialog.
+
 ## Sensors
 
 | Sensor | State | Attributes |
@@ -45,6 +48,34 @@ A HACS-compatible Home Assistant custom integration that provides Islamic prayer
 | Maghrib | HH:MM | adjustment_minutes, calculation_method, lat/lon |
 | Isha | HH:MM | adjustment_minutes, calculation_method, lat/lon |
 | Next Prayer | Prayer name | time, countdown, remaining_seconds, enabled_prayers |
+
+## Adjusting Prayer Times
+
+Every prayer exposes a **live offset slider** on the integration's device
+page, for example `number.islamic_prayers_fajr_offset`:
+
+| Entity | Range | Step |
+|--------|-------|------|
+| `number.<prayer>_offset` | -60 to +60 minutes | 1 minute |
+
+Dragging the slider — or calling `number.set_value` — recalculates all prayer
+times immediately. No reload, restart or options flow is needed, and the value
+is stored in the config entry so it survives restarts.
+
+Slider visibility follows the same per-prayer setting as the Next Prayer sensor:
+when a prayer is excluded from Next Prayer (the existing `next_prayer_*`
+toggles), its offset slider is **hidden** in the UI, and it reappears as soon
+as the prayer is enabled again. Tark-e-Seher has no Next Prayer toggle, so its
+slider is always visible.
+
+Arrival events are only raised for prayers that are actually reached:
+
+- Times that are already in the past are never announced. If an offset moves a
+  prayer behind the current time, it is silently treated as passed.
+- A prayer that was already announced never fires again, even if an offset
+  moves its time back into the future.
+- Arrivals detected more than 5 minutes late (for example after Home Assistant
+  was suspended) are treated as passed instead of raising an event.
 
 ## Calculation Methods
 

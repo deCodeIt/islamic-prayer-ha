@@ -17,7 +17,7 @@
       },
       "adjustments": {
         "title": "Adjustments",
-        "description": "Adjust individual prayer times by +/- minutes and choose which prayers contribute to the Next Prayer sensor.",
+        "description": "Adjust individual prayer times by +/- minutes and choose which prayers contribute to the Next Prayer sensor. These offsets can also be changed live at any time with the offset sliders on the device page; sliders for prayers excluded from Next Prayer are hidden.",
         "data": {
           "tarke_seher_offset": "Tark-e-Seher offset (minutes)",
           "fajr_offset": "Fajr offset (minutes)",
@@ -66,7 +66,8 @@
           "next_prayer_asr": "Include Asr in Next Prayer",
           "next_prayer_maghrib": "Include Maghrib in Next Prayer",
           "next_prayer_isha": "Include Isha in Next Prayer"
-        }
+        },
+        "description": "Adjust individual prayer times by +/- minutes and choose which prayers contribute to the Next Prayer sensor. Changes apply immediately, and the same offsets are also available as live sliders on the device page; sliders for prayers excluded from Next Prayer are hidden."
       }
     }
   },

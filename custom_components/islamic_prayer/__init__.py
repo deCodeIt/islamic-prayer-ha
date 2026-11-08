@@ -7,43 +7,31 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import (
-    CONF_CALC_METHOD,
-    CONF_LATITUDE,
-    CONF_LONGITUDE,
-    DEFAULT_CALC_METHOD,
-    DOMAIN,
-    PRAYER_NEXT_TOGGLE_MAP,
-    PRAYER_OFFSET_MAP,
-)
+from .const import DOMAIN
 from .coordinator import IslamicPrayerTimesCoordinator
+from .helpers import (
+    config_signature,
+    get_calc_method,
+    get_latitude,
+    get_longitude,
+    get_next_prayer_toggles,
+    get_offsets,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["event", "sensor"]
+PLATFORMS = ["event", "number", "sensor"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Islamic Prayers from a config entry."""
-    data = entry.data
-
-    offsets = {
-        prayer_key: int(data.get(offset_key, 0))
-        for prayer_key, offset_key in PRAYER_OFFSET_MAP.items()
-    }
-
-    next_prayer_toggles = {
-        prayer_key: data.get(toggle_key, True)
-        for prayer_key, toggle_key in PRAYER_NEXT_TOGGLE_MAP.items()
-    }
-
     coordinator = IslamicPrayerTimesCoordinator(
         hass,
-        latitude=data[CONF_LATITUDE],
-        longitude=data[CONF_LONGITUDE],
-        calc_method=data.get(CONF_CALC_METHOD, DEFAULT_CALC_METHOD),
-        offsets=offsets,
-        next_prayer_toggles=next_prayer_toggles,
+        latitude=get_latitude(entry),
+        longitude=get_longitude(entry),
+        calc_method=get_calc_method(entry),
+        offsets=get_offsets(entry),
+        next_prayer_toggles=get_next_prayer_toggles(entry),
     )
     await coordinator.async_config_entry_first_refresh()
 
@@ -54,8 +42,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload integration when options change."""
-    await hass.config_entries.async_reload(entry.entry_id)
+    """Apply live settings, reloading only when location or method changed."""
+    coordinator: IslamicPrayerTimesCoordinator | None = hass.data.get(
+        DOMAIN, {}
+    ).get(entry.entry_id)
+    if coordinator is None:
+        return
+
+    if coordinator.settings_signature != config_signature(entry):
+        await hass.config_entries.async_reload(entry.entry_id)
+        return
+
+    if coordinator.apply_settings(
+        get_offsets(entry), get_next_prayer_toggles(entry)
+    ):
+        await coordinator.async_recalculate()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

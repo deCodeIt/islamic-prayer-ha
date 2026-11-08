@@ -16,12 +16,11 @@ from .const import (
     CUSTOM_PRAYTIMES_METHODS,
     DEFAULT_CALC_METHOD,
     DOMAIN,
-    PRAYER_FAJR,
-    PRAYER_NAMES,
-    PRAYER_ZUHR,
     PRAYER_ASR,
-    PRAYER_MAGHRIB,
+    PRAYER_FAJR,
     PRAYER_ISHA,
+    PRAYER_MAGHRIB,
+    PRAYER_ZUHR,
     PRAYERS,
     PRAYTIMES_KEY_MAP,
 )
@@ -29,6 +28,11 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 NEXT_PRAYER_ORDER = [PRAYER_FAJR, PRAYER_ZUHR, PRAYER_ASR, PRAYER_MAGHRIB, PRAYER_ISHA]
+
+# An arrival is only announced if it was detected close to its actual time.
+# Anything older (HA asleep, clock jump, offset moved a time into the past) is
+# treated as already passed and never raises an event.
+ARRIVAL_GRACE = timedelta(minutes=5)
 
 # Register custom methods on the PrayTimes class once
 for _key, _config in CUSTOM_PRAYTIMES_METHODS.items():
@@ -67,13 +71,53 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
         self.latitude = latitude
         self.longitude = longitude
         self.calc_method = calc_method
-        self.offsets = offsets
-        self.next_prayer_toggles = next_prayer_toggles
+        self.offsets = dict(offsets)
+        self.next_prayer_toggles = dict(next_prayer_toggles)
         self._cached_date: str | None = None
         self._cached_times: dict[str, datetime] = {}
         self._announced_prayers: set[str] = set()
-        self._initialized: bool = False
-        self.last_arrived_prayer: str | None = None
+        # Prayers whose time just arrived; drained by the event entity
+        self.arrived_prayers: list[str] = []
+
+    @property
+    def settings_signature(self) -> tuple:
+        """Settings that only take effect after a reload."""
+        return (
+            self.latitude,
+            self.longitude,
+            self.calc_method,
+        )
+
+    def apply_settings(
+        self,
+        offsets: dict[str, int],
+        next_prayer_toggles: dict[str, bool],
+    ) -> bool:
+        """Apply live-editable settings. Returns True if anything changed."""
+        changed = False
+        for prayer_key, minutes in offsets.items():
+            if self.offsets.get(prayer_key) != minutes:
+                self.offsets[prayer_key] = minutes
+                changed = True
+        for prayer_key, enabled in next_prayer_toggles.items():
+            if self.next_prayer_toggles.get(prayer_key) != enabled:
+                self.next_prayer_toggles[prayer_key] = enabled
+                changed = True
+        return changed
+
+    async def async_set_offset(self, prayer_key: str, minutes: int) -> None:
+        """Update a single prayer offset and recalculate immediately."""
+        if self.offsets.get(prayer_key) == minutes:
+            return
+        self.offsets[prayer_key] = minutes
+        await self.async_recalculate()
+
+    async def async_recalculate(self) -> None:
+        """Recalculate today's times and push the result to all listeners."""
+        tz = ZoneInfo(self.hass.config.time_zone)
+        now = datetime.now(tz)
+        await self._async_refresh_times(now, tz)
+        self.async_set_updated_data(await self._async_build_data(now, tz))
 
     def _calculate_times(
         self, for_date: datetime, tz: ZoneInfo
@@ -105,6 +149,49 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
             times[prayer_key] = prayer_dt + timedelta(minutes=offset_minutes)
         return times
 
+    async def _async_refresh_times(self, now: datetime, tz: ZoneInfo) -> None:
+        """Recalculate and cache today's times.
+
+        Times already behind ``now`` (for example because an offset just moved
+        them into the past) are marked as announced, so they never raise an
+        arrival event.
+        """
+        self._cached_times = await self.hass.async_add_executor_job(
+            self._calculate_times, now, tz
+        )
+        self._cached_date = now.strftime("%Y-%m-%d")
+        self._mark_past_as_announced(self._cached_times, now)
+
+    def _mark_past_as_announced(
+        self, times: dict[str, datetime], now: datetime
+    ) -> None:
+        """Silently mark prayers that already happened today."""
+        for prayer_key in NEXT_PRAYER_ORDER:
+            prayer_dt = times.get(prayer_key)
+            if prayer_dt is not None and prayer_dt <= now:
+                self._announced_prayers.add(prayer_key)
+
+    def _collect_arrivals(
+        self, times: dict[str, datetime], now: datetime
+    ) -> None:
+        """Queue prayers whose time has just arrived."""
+        for prayer_key in NEXT_PRAYER_ORDER:
+            prayer_dt = times.get(prayer_key)
+            if prayer_dt is None or prayer_dt > now:
+                continue
+            if prayer_key in self._announced_prayers:
+                continue
+            self._announced_prayers.add(prayer_key)
+            if now - prayer_dt > ARRIVAL_GRACE:
+                _LOGGER.debug(
+                    "Skipping event for %s, its time %s is too far in the past",
+                    prayer_key,
+                    prayer_dt,
+                )
+                continue
+            if self.next_prayer_toggles.get(prayer_key, True):
+                self.arrived_prayers.append(prayer_key)
+
     def _determine_next_prayer(
         self, times: dict[str, datetime], now: datetime
     ) -> tuple[str | None, datetime | None, list[str]]:
@@ -119,42 +206,10 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
                     return prayer_key, times[prayer_key], enabled
         return None, None, enabled
 
-    def _check_prayer_arrivals(
-        self, times: dict[str, datetime], now: datetime
-    ) -> str | None:
-        """Check if a prayer time has just arrived. Returns prayer key or None."""
-        arrived = None
-        for prayer_key in NEXT_PRAYER_ORDER:
-            if prayer_key in self._announced_prayers:
-                continue
-            prayer_dt = times.get(prayer_key)
-            if prayer_dt and prayer_dt <= now:
-                self._announced_prayers.add(prayer_key)
-                if self._initialized and self.next_prayer_toggles.get(prayer_key, True):
-                    arrived = prayer_key
-        if not self._initialized:
-            self._initialized = True
-            _LOGGER.debug(
-                "Initialized announced prayers (skipped events for already-passed: %s)",
-                self._announced_prayers,
-            )
-        return arrived
-
-    async def _async_update_data(self) -> PrayerTimeData:
-        """Recalculate prayer times and determine next prayer."""
-        tz = ZoneInfo(self.hass.config.time_zone)
-        now = datetime.now(tz)
-        today_str = now.strftime("%Y-%m-%d")
-
-        if self._cached_date != today_str:
-            self._cached_times = await self.hass.async_add_executor_job(
-                self._calculate_times, now, tz
-            )
-            self._cached_date = today_str
-            self._announced_prayers.clear()
-
-        self.last_arrived_prayer = self._check_prayer_arrivals(self._cached_times, now)
-
+    async def _async_build_data(
+        self, now: datetime, tz: ZoneInfo
+    ) -> PrayerTimeData:
+        """Build the coordinator payload for the current moment."""
         next_prayer, next_time, enabled = self._determine_next_prayer(
             self._cached_times, now
         )
@@ -171,8 +226,22 @@ class IslamicPrayerTimesCoordinator(DataUpdateCoordinator[PrayerTimeData]):
                     break
 
         return PrayerTimeData(
-            prayer_times=self._cached_times,
+            prayer_times=dict(self._cached_times),
             next_prayer=next_prayer,
             next_prayer_time=next_time,
             enabled_prayers=enabled,
         )
+
+    async def _async_update_data(self) -> PrayerTimeData:
+        """Recalculate prayer times and determine next prayer."""
+        tz = ZoneInfo(self.hass.config.time_zone)
+        now = datetime.now(tz)
+        today_str = now.strftime("%Y-%m-%d")
+
+        if self._cached_date != today_str:
+            self._announced_prayers.clear()
+            await self._async_refresh_times(now, tz)
+
+        self._collect_arrivals(self._cached_times, now)
+
+        return await self._async_build_data(now, tz)
