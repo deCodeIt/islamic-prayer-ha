@@ -6,7 +6,7 @@
   "documentation": "https://github.com/deCodeIt/islamic-prayer-ha",
   "iot_class": "calculated",
   "requirements": ["praytimes>=1.0"],
-  "version": "0.5.0",
+  "version": "0.5.1",
   "integration_type": "service"
 }
 

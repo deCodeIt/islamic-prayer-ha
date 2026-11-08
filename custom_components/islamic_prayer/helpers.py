@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -14,14 +15,39 @@ from .const import (
     CONF_LONGITUDE,
     DEFAULT_CALC_METHOD,
     DOMAIN,
+    OFFSET_MAX_MINUTES,
+    OFFSET_MIN_MINUTES,
     PRAYER_NEXT_TOGGLE_MAP,
     PRAYER_OFFSET_MAP,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _config_value(entry: ConfigEntry, key: str, default: Any = None) -> Any:
     """Return the effective config value (options override data)."""
     return entry.options.get(key, entry.data.get(key, default))
+
+
+def _clamp_offset(prayer_key: str, value: Any) -> int:
+    """Coerce an offset to whole minutes within the supported range."""
+    try:
+        minutes = int(value)
+    except (TypeError, ValueError):
+        return 0
+    if OFFSET_MIN_MINUTES <= minutes <= OFFSET_MAX_MINUTES:
+        return minutes
+    clamped = max(OFFSET_MIN_MINUTES, min(minutes, OFFSET_MAX_MINUTES))
+    _LOGGER.warning(
+        "Offset of %s minutes for %s is outside the supported %s..%s range;"
+        " using %s minutes instead",
+        minutes,
+        prayer_key,
+        OFFSET_MIN_MINUTES,
+        OFFSET_MAX_MINUTES,
+        clamped,
+    )
+    return clamped
 
 
 def get_calc_method(entry: ConfigEntry) -> str:
@@ -44,10 +70,9 @@ def get_offsets(entry: ConfigEntry) -> dict[str, int]:
     """Return per-prayer offsets in minutes keyed by prayer."""
     offsets: dict[str, int] = {}
     for prayer_key, offset_key in PRAYER_OFFSET_MAP.items():
-        try:
-            offsets[prayer_key] = int(_config_value(entry, offset_key, 0))
-        except (TypeError, ValueError):
-            offsets[prayer_key] = 0
+        offsets[prayer_key] = _clamp_offset(
+            prayer_key, _config_value(entry, offset_key, 0)
+        )
     return offsets
 
 

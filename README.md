@@ -56,7 +56,7 @@ page, for example `number.islamic_prayers_fajr_offset`:
 
 | Entity | Range | Step |
 |--------|-------|------|
-| `number.<prayer>_offset` | -60 to +60 minutes | 1 minute |
+| `number.<prayer>_offset` | -30 to +30 minutes | 1 minute |
 
 Dragging the slider — or calling `number.set_value` — recalculates all prayer
 times immediately. No reload, restart or options flow is needed, and the value
