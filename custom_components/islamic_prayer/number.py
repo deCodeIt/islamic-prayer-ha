@@ -105,7 +105,9 @@ class PrayerOffsetNumber(
 
     async def async_set_native_value(self, value: float) -> None:
         """Apply the offset live and persist it for restarts."""
-        minutes = int(round(value))
+        minutes = max(
+            OFFSET_MIN_MINUTES, min(int(round(value)), OFFSET_MAX_MINUTES)
+        )
         await self.coordinator.async_set_offset(self._prayer_key, minutes)
         self.hass.config_entries.async_update_entry(
             self._entry,
