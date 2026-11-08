@@ -5,20 +5,12 @@ from __future__ import annotations
 from homeassistant.components.event import EventEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    CALC_METHODS,
-    CONF_CALC_METHOD,
-    DEFAULT_CALC_METHOD,
-    DOMAIN,
-    EVENT_PRAYER_TIME,
-    EVENT_TYPES,
-    PRAYER_NAMES,
-)
+from .const import DOMAIN, EVENT_PRAYER_TIME, EVENT_TYPES, PRAYER_NAMES
 from .coordinator import IslamicPrayerTimesCoordinator
+from .helpers import device_info
 
 
 async def async_setup_entry(
@@ -48,23 +40,15 @@ class PrayerTimeEvent(
         super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{entry.entry_id}_{EVENT_PRAYER_TIME}"
         self._attr_name = "Prayer Time"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name="Islamic Prayers",
-            manufacturer="adhanpy",
-            model=CALC_METHODS.get(
-                entry.data.get(CONF_CALC_METHOD, DEFAULT_CALC_METHOD), "Unknown"
-            ),
-        )
+        self._attr_device_info = device_info(entry)
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        prayer_key = self.coordinator.last_arrived_prayer
-        if prayer_key is not None:
+        while self.coordinator.arrived_prayers:
+            prayer_key = self.coordinator.arrived_prayers.pop(0)
             self._trigger_event(
                 prayer_key,
                 {"name": PRAYER_NAMES.get(prayer_key, prayer_key)},
             )
-            self.coordinator.last_arrived_prayer = None
         self.async_write_ha_state()

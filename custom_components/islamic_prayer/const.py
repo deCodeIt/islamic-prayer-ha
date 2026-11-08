@@ -46,6 +46,15 @@ PRAYER_NAMES = {
     PRAYER_ISHA: "Isha",
 }
 
+PRAYER_ICONS = {
+    PRAYER_TARKE_SEHER: "mdi:weather-sunset-up",
+    PRAYER_FAJR: "mdi:weather-sunset-up",
+    PRAYER_ZUHR: "mdi:white-balance-sunny",
+    PRAYER_ASR: "mdi:weather-sunny",
+    PRAYER_MAGHRIB: "mdi:weather-sunset-down",
+    PRAYER_ISHA: "mdi:weather-night",
+}
+
 PRAYER_OFFSET_MAP = {
     PRAYER_TARKE_SEHER: CONF_TARKE_SEHER_OFFSET,
     PRAYER_FAJR: CONF_FAJR_OFFSET,
@@ -62,6 +71,14 @@ PRAYER_NEXT_TOGGLE_MAP = {
     PRAYER_MAGHRIB: CONF_NEXT_PRAYER_MAGHRIB,
     PRAYER_ISHA: CONF_NEXT_PRAYER_ISHA,
 }
+
+# Live-adjustable offsets (exposed as number slider entities)
+OFFSET_CONF_KEYS = list(PRAYER_OFFSET_MAP.values())
+TOGGLE_CONF_KEYS = list(PRAYER_NEXT_TOGGLE_MAP.values())
+
+OFFSET_MIN_MINUTES = -60
+OFFSET_MAX_MINUTES = 60
+OFFSET_STEP_MINUTES = 1
 
 # praytimes library key -> display label
 CALC_METHODS = {

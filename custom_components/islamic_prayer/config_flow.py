@@ -12,23 +12,24 @@ from homeassistant.helpers import selector
 
 from .const import (
     CALC_METHODS,
-    CONF_ASR_OFFSET,
     CONF_CALC_METHOD,
-    CONF_FAJR_OFFSET,
-    CONF_ISHA_OFFSET,
     CONF_LATITUDE,
     CONF_LOCATION,
     CONF_LONGITUDE,
-    CONF_MAGHRIB_OFFSET,
-    CONF_NEXT_PRAYER_ASR,
-    CONF_NEXT_PRAYER_FAJR,
-    CONF_NEXT_PRAYER_ISHA,
-    CONF_NEXT_PRAYER_MAGHRIB,
-    CONF_NEXT_PRAYER_ZUHR,
-    CONF_TARKE_SEHER_OFFSET,
-    CONF_ZUHR_OFFSET,
     DEFAULT_CALC_METHOD,
     DOMAIN,
+    OFFSET_CONF_KEYS,
+    OFFSET_MAX_MINUTES,
+    OFFSET_MIN_MINUTES,
+    OFFSET_STEP_MINUTES,
+    TOGGLE_CONF_KEYS,
+)
+from .helpers import (
+    get_calc_method,
+    get_latitude,
+    get_longitude,
+    get_offset_config,
+    get_toggle_config,
 )
 
 CALC_METHOD_OPTIONS = [
@@ -36,75 +37,29 @@ CALC_METHOD_OPTIONS = [
     for k, v in CALC_METHODS.items()
 ]
 
+LOCATION_SELECTOR = selector.LocationSelector(
+    selector.LocationSelectorConfig(radius=False)
+)
+
 
 def _adjustments_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+    """Build the offsets/toggles schema, defaulting to the live values."""
     d = defaults or {}
-    return vol.Schema(
-        {
-            vol.Optional(
-                CONF_TARKE_SEHER_OFFSET, default=d.get(CONF_TARKE_SEHER_OFFSET, 0)
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=-60, max=60, step=1, mode=selector.NumberSelectorMode.BOX
-                )
-            ),
-            vol.Optional(
-                CONF_FAJR_OFFSET, default=d.get(CONF_FAJR_OFFSET, 0)
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=-60, max=60, step=1, mode=selector.NumberSelectorMode.BOX
-                )
-            ),
-            vol.Optional(
-                CONF_ZUHR_OFFSET, default=d.get(CONF_ZUHR_OFFSET, 0)
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=-60, max=60, step=1, mode=selector.NumberSelectorMode.BOX
-                )
-            ),
-            vol.Optional(
-                CONF_ASR_OFFSET, default=d.get(CONF_ASR_OFFSET, 0)
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=-60, max=60, step=1, mode=selector.NumberSelectorMode.BOX
-                )
-            ),
-            vol.Optional(
-                CONF_MAGHRIB_OFFSET, default=d.get(CONF_MAGHRIB_OFFSET, 0)
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=-60, max=60, step=1, mode=selector.NumberSelectorMode.BOX
-                )
-            ),
-            vol.Optional(
-                CONF_ISHA_OFFSET, default=d.get(CONF_ISHA_OFFSET, 0)
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=-60, max=60, step=1, mode=selector.NumberSelectorMode.BOX
-                )
-            ),
-            vol.Optional(
-                CONF_NEXT_PRAYER_FAJR,
-                default=d.get(CONF_NEXT_PRAYER_FAJR, True),
-            ): selector.BooleanSelector(),
-            vol.Optional(
-                CONF_NEXT_PRAYER_ZUHR,
-                default=d.get(CONF_NEXT_PRAYER_ZUHR, True),
-            ): selector.BooleanSelector(),
-            vol.Optional(
-                CONF_NEXT_PRAYER_ASR,
-                default=d.get(CONF_NEXT_PRAYER_ASR, True),
-            ): selector.BooleanSelector(),
-            vol.Optional(
-                CONF_NEXT_PRAYER_MAGHRIB,
-                default=d.get(CONF_NEXT_PRAYER_MAGHRIB, True),
-            ): selector.BooleanSelector(),
-            vol.Optional(
-                CONF_NEXT_PRAYER_ISHA,
-                default=d.get(CONF_NEXT_PRAYER_ISHA, True),
-            ): selector.BooleanSelector(),
-        }
+    offset_selector = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=OFFSET_MIN_MINUTES,
+            max=OFFSET_MAX_MINUTES,
+            step=OFFSET_STEP_MINUTES,
+            mode=selector.NumberSelectorMode.BOX,
+        )
     )
+
+    schema: dict[Any, Any] = {}
+    for key in OFFSET_CONF_KEYS:
+        schema[vol.Optional(key, default=d.get(key, 0))] = offset_selector
+    for key in TOGGLE_CONF_KEYS:
+        schema[vol.Optional(key, default=d.get(key, True))] = selector.BooleanSelector()
+    return vol.Schema(schema)
 
 
 class IslamicPrayerTimesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -135,9 +90,7 @@ class IslamicPrayerTimesConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             "latitude": self.hass.config.latitude,
                             "longitude": self.hass.config.longitude,
                         },
-                    ): selector.LocationSelector(
-                        selector.LocationSelectorConfig(radius=False)
-                    ),
+                    ): LOCATION_SELECTOR,
                 }
             ),
         )
@@ -201,7 +154,6 @@ class IslamicPrayerTimesOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Options Step 1: Location."""
-        current = self._config_entry.data
         if user_input is not None:
             loc = user_input[CONF_LOCATION]
             self._new_data[CONF_LATITUDE] = loc["latitude"]
@@ -215,16 +167,10 @@ class IslamicPrayerTimesOptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_LOCATION,
                         default={
-                            "latitude": current.get(
-                                CONF_LATITUDE, self.hass.config.latitude
-                            ),
-                            "longitude": current.get(
-                                CONF_LONGITUDE, self.hass.config.longitude
-                            ),
+                            "latitude": get_latitude(self._config_entry),
+                            "longitude": get_longitude(self._config_entry),
                         },
-                    ): selector.LocationSelector(
-                        selector.LocationSelectorConfig(radius=False)
-                    ),
+                    ): LOCATION_SELECTOR,
                 }
             ),
         )
@@ -233,7 +179,6 @@ class IslamicPrayerTimesOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Options Step 2: Calculation method."""
-        current = self._config_entry.data
         if user_input is not None:
             self._new_data[CONF_CALC_METHOD] = user_input[CONF_CALC_METHOD]
             return await self.async_step_adjustments()
@@ -244,7 +189,7 @@ class IslamicPrayerTimesOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         CONF_CALC_METHOD,
-                        default=current.get(CONF_CALC_METHOD, DEFAULT_CALC_METHOD),
+                        default=get_calc_method(self._config_entry),
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=CALC_METHOD_OPTIONS,
@@ -258,15 +203,40 @@ class IslamicPrayerTimesOptionsFlow(config_entries.OptionsFlow):
     async def async_step_adjustments(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
-        """Options Step 3: Offsets and toggles."""
+        """Options Step 3: Offsets and toggles applied without a reload."""
         if user_input is not None:
-            new_data = {**self._new_data, **user_input}
+            # Offsets live in the entry options so the number entities stay the
+            # single source of truth; toggles stay in the entry data.
+            offsets = {
+                key: value
+                for key, value in user_input.items()
+                if key in OFFSET_CONF_KEYS
+            }
+            toggles = {
+                **get_toggle_config(self._config_entry),
+                **{
+                    key: value
+                    for key, value in user_input.items()
+                    if key in TOGGLE_CONF_KEYS
+                },
+            }
             self.hass.config_entries.async_update_entry(
-                self._config_entry, data=new_data
+                self._config_entry,
+                data={**self._new_data, **toggles},
             )
-            return self.async_create_entry(title="", data={})
+            # OptionsFlow result data becomes the entry options, so return the
+            # merged offsets to keep the number entities in sync.
+            return self.async_create_entry(
+                title="",
+                data={**self._config_entry.options, **offsets},
+            )
 
         return self.async_show_form(
             step_id="adjustments",
-            data_schema=_adjustments_schema(dict(self._config_entry.data)),
+            data_schema=_adjustments_schema(
+                {
+                    **get_offset_config(self._config_entry),
+                    **get_toggle_config(self._config_entry),
+                }
+            ),
         )
